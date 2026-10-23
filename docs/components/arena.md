@@ -129,7 +129,8 @@ Enforced by the engine for every account, whatever the strategy or model propose
 
 ### Live account limits (Liara build)
 
-- **Total exposure:** maker inventory is capped at **35% of equity** (`WALLEX_MAX_EXPOSURE`, default 0.35, inside the
+- **Live strategy:** `WALLEX_LIVE_STRATEGY=ai_maker` (default) or `macro` (the macro allocator).
+- **Total exposure:** every live strategy is capped at **35% of equity** (engine risk block and, for the maker, its inventory cap) (`WALLEX_MAX_EXPOSURE`, default 0.35, inside the
   recommended 30-40% range; the paper test used 45%).
 - **Per order and per market:** at most 8% of equity per market (the AI guardrail) and at most 2,000,000 TMN per order.
 - **Drawdown:** new entries pause at 5% drawdown; the account halts and liquidates at 10%.
