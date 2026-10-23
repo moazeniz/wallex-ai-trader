@@ -1,0 +1,29 @@
+# Template: rendered by deploy/systemd/install.sh (@@...@@ placeholders).
+# Dead-man switch for a LIVE account. Rendered DISARMED (WALLEX_LIVE_ENABLED=0): it only logs.
+# It places exchange-side stop orders only when armed via live/wallex-live-watchdog.live.conf
+# and /var/lib/wallex-arena/LIVE_DISABLED is absent.
+[Unit]
+Description=Dead-man watchdog for the live Wallex account (exchange-side stops if the arena engine goes silent)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=@@SERVICE_USER@@
+Group=@@SERVICE_USER@@
+WorkingDirectory=@@APP_DIR@@
+# File with WALLEX_API_KEY=... and WALLEX_SUBACCOUNT_ID=... (root-owned, mode 0600).
+LoadCredential=wallex:@@SECRETS_DIR@@/wallex.env
+Environment=WALLEX_ENV_FILE=%d/wallex
+Environment=WALLEX_LIVE_ENABLED=0
+Environment=PYTHONWARNINGS=ignore
+ExecStart=@@VENV@@/bin/python -m experiments.wallex_arena.watchdog /var/lib/wallex-arena/status.json /var/lib/wallex-arena/watchdog.json
+Restart=always
+RestartSec=10
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/wallex-arena
+
+[Install]
+WantedBy=multi-user.target

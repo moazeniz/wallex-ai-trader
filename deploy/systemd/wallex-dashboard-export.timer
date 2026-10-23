@@ -1,0 +1,10 @@
+[Unit]
+Description=Refresh Wallex arena dashboard data every 30 seconds
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=30s
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target

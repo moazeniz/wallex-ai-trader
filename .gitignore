@@ -1,0 +1,77 @@
+# ---- Secrets: never commit ------------------------------------------------
+.env
+*.env
+!.env.example
+test.env
+private/
+secrets/
+*.pem
+*.key
+credentials.json
+config/wallex.local.json
+config/wallex.agent.local.json
+*password*.txt
+_private/
+*.private.md
+
+# ---- Python -----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ---- Runtime state, datasets and logs (live on the server, not in git) -----
+data/*/
+data/*.db
+data/*.sqlite
+data/backup*/
+.cache/
+.wallex-state/
+.wallex-agent/
+arena-state/
+# Results snapshot copied in for a Liara build (data, not code)
+snapshot/
+logs/
+*.log
+nohup.out
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.db
+
+# Generated artifacts: only the frozen models listed below are tracked.
+artifacts/*
+!artifacts/wallex_agent/
+artifacts/wallex_agent/*
+!artifacts/wallex_agent/quant-universe-v2/
+!artifacts/wallex_challenge/
+artifacts/wallex_challenge/*/*
+!artifacts/wallex_challenge/*/model.json
+!artifacts/wallex_challenge/*/report.json
+
+# Legacy CryptoAlpha model weights (large; distribute out of band)
+models/
+
+# Node (optional TradingView bridge)
+node_modules/
+
+# Rendered deployment files
+build/
+
+# ---- Editors / OS -----------------------------------------------------------
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+*.bak

@@ -1,0 +1,26 @@
+# Template: rendered by deploy/systemd/install.sh (@@...@@ placeholders).
+# Public market data only (no credentials): Wallex depth/trades + Binance book tickers -> SQLite.
+[Unit]
+Description=Wallex order-book recorder (public depth, trades and Binance quotes to SQLite)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=@@SERVICE_USER@@
+Group=@@SERVICE_USER@@
+WorkingDirectory=@@APP_DIR@@
+StateDirectory=wallex-book-recorder
+StateDirectoryMode=0750
+ExecStart=@@VENV@@/bin/python @@APP_DIR@@/services/book_recorder.py /var/lib/wallex-book-recorder/books.sqlite 12
+Restart=always
+RestartSec=10
+Nice=5
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/wallex-book-recorder
+
+[Install]
+WantedBy=multi-user.target

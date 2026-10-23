@@ -1,0 +1,15 @@
+# Template: rendered by deploy/systemd/install.sh (@@...@@ placeholders). Triggered by the .timer.
+[Unit]
+Description=Export Wallex arena leaderboard/equity/trades JSON for the dashboard
+
+[Service]
+Type=oneshot
+User=@@SERVICE_USER@@
+Group=@@SERVICE_USER@@
+ExecStart=@@VENV@@/bin/python @@APP_DIR@@/services/dashboard_export.py @@WEB_DIR@@/data /var/lib/wallex-arena
+Nice=10
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=@@WEB_DIR@@/data

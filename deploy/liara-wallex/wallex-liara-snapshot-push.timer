@@ -1,0 +1,11 @@
+[Unit]
+Description=Push the Wallex arena results to the Liara dashboard every 5 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=30s
+Persistent=false
+
+[Install]
+WantedBy=timers.target

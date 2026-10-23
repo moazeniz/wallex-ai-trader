@@ -1,0 +1,48 @@
+# Upload filter for `liara deploy` from the repository root (the CLI uses this instead of .gitignore here).
+# Only what the root Dockerfile needs: experiments/, tests/test_wallex_arena*, deploy/liara-wallex/, optional snapshot/.
+.git
+.github
+.venv
+venv
+build
+**/__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+# secrets and runtime state: never upload
+.env
+*.env
+_private
+private
+*.private.md
+*.pem
+*.key
+*.sqlite
+*.db
+data
+.cache
+.wallex-state
+.wallex-agent
+arena-state
+# not used by the Liara image
+agents
+bot
+core
+features
+memory
+ml
+tools
+utils
+config
+scripts
+services
+artifacts
+docs
+deploy/systemd
+deploy/env
+main.py
+settings.py
+experiments/wallex_challenge
+experiments/predictor_v0
+experiments/wallex_agent/tradingview
+node_modules

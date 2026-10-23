@@ -1,0 +1,14 @@
+[Unit]
+Description=Push a fresh paper/shadow results snapshot of the Wallex arena to the Liara dashboard (read-only on the arena)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/wallex/liara-live/deploy/liara-wallex/push_snapshot.py
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=300
+PrivateTmp=yes
+ProtectSystem=full
+NoNewPrivileges=yes

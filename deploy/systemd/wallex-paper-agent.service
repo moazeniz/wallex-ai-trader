@@ -1,0 +1,48 @@
+# Template: rendered by deploy/systemd/install.sh (@@...@@ placeholders).
+# PAPER ONLY: experiments.wallex_agent has no order-submission transport at all.
+[Unit]
+Description=Wallex multi-source research agent with a shared paper portfolio (no real orders)
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=600
+StartLimitBurst=4
+
+[Service]
+Type=simple
+User=@@SERVICE_USER@@
+Group=@@SERVICE_USER@@
+WorkingDirectory=@@APP_DIR@@
+StateDirectory=wallex-paper-agent
+StateDirectoryMode=0700
+LoadCredential=anthropic:@@SECRETS_DIR@@/anthropic.env
+Environment=WALLEX_ANTHROPIC_SECRET_FILE=%d/anthropic
+Environment=WALLEX_ANTHROPIC_BUDGET_DB=/var/lib/wallex-paper-agent/llm-budget.sqlite
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+Environment=OMP_NUM_THREADS=2
+Environment=OPENBLAS_NUM_THREADS=2
+Environment=MKL_NUM_THREADS=2
+ExecStart=@@VENV@@/bin/python -m experiments.wallex_agent serve --model @@APP_DIR@@/artifacts/wallex_agent/quant-universe-v2/model.json --state /var/lib/wallex-paper-agent --artifacts /var/lib/wallex-paper-agent/artifacts --poll-seconds 300 --research-limit 3
+Restart=on-failure
+RestartSec=30
+TimeoutStopSec=180
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+ReadWritePaths=/var/lib/wallex-paper-agent
+Nice=10
+CPUQuota=100%
+MemoryMax=1500M
+TasksMax=64
+
+[Install]
+WantedBy=multi-user.target

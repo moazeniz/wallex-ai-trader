@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wallex Arena</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@400&family=IBM+Plex+Mono:wght@400&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+  /* Layout: one column of cards under a status header; data reloads every 30 seconds. */
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --fg: #18202b; --muted: #5d6877; --line: #dde2e8;
+    --accent: #1f6feb; --s2: #b5562d; --s3: #2f8f5b; --mutedline: #b9c1cc;
+    --ok: #237a4b; --bad: #b42318; --warn: #a15c00;
+    --sans: "IBM Plex Sans", system-ui, sans-serif; --serif: "IBM Plex Serif", Georgia, serif; --mono: "IBM Plex Mono", ui-monospace, monospace;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #0f1419; --panel: #171e26; --fg: #e6ebf1; --muted: #9aa6b4; --line: #2a3440;
+    --accent: #6ea8ff; --s2: #f08a5d; --s3: #5fcf91; --mutedline: #4a5664; --ok: #5fcf91; --bad: #ff7b72; --warn: #f2b84b; color-scheme: dark } }
+  :root[data-theme="dark"] {
+    --bg: #0f1419; --panel: #171e26; --fg: #e6ebf1; --muted: #9aa6b4; --line: #2a3440;
+    --accent: #6ea8ff; --s2: #f08a5d; --s3: #5fcf91; --mutedline: #4a5664; --ok: #5fcf91; --bad: #ff7b72; --warn: #f2b84b; color-scheme: dark }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.5 var(--sans); }
+  .wrap { max-width: 1200px; margin-inline: auto; padding-block: 24px 48px;
+          padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+          display: grid; gap: 20px; }
+  h1 { font: 400 30px/1.2 var(--serif); margin: 0; text-wrap: balance; }
+  .take { margin: 6px 0 0; max-width: 72ch; }
+  .note { margin: 4px 0 0; color: var(--muted); font-size: 12.5px; }
+  .status { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .chip { font-size: 12px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); background: var(--panel); }
+  .chip.ok::before, .chip.bad::before, .chip.warn::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+  .chip.ok::before { background: var(--ok); } .chip.bad::before { background: var(--bad); } .chip.warn::before { background: var(--warn); }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 12px; }
+  .tile, .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
+  .tile .lbl { color: var(--muted); font-size: 12px; letter-spacing: .02em; }
+  .tile .val { font: 400 28px/1.2 var(--serif); font-variant-numeric: tabular-nums; margin-top: 4px; }
+  .tile .sub { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .card h2 { font-size: 16px; font-weight: 500; margin: 0; }
+  .card .note { margin-bottom: 12px; }
+  .chart { position: relative; min-height: 340px; }
+  .tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+         box-shadow: 0 6px 20px rgb(0 0 0 / .12); padding: 6px 10px; font-size: 12px; white-space: nowrap; }
+  .tip .t { color: var(--muted); }
+  .tip .row { display: flex; gap: 6px; align-items: center; font-variant-numeric: tabular-nums; }
+  .sw { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+  .scroll { overflow: auto; max-height: 34rem; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  th { position: sticky; top: 0; background: var(--panel); text-align: left; font-weight: 500; color: var(--muted);
+       padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .num { text-align: right; }
+  .pos { color: var(--ok); } .neg { color: var(--bad); }
+  .reason { color: var(--muted); min-width: 16rem; }
+  .pill { display: inline-block; padding: 0 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+  .mono { font-family: var(--mono); font-size: 12px; }
+  @media (max-width: 640px) { .hide-narrow { display: none; } h1 { font-size: 24px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Wallex Arena</h1>
+    <p class="take" id="take">Loading the arena…</p>
+    <p class="note">Paper trading on live Wallex order books. Every account started with 5,000,000 toman and pays Wallex fees (0.30% market, 0.25% limit). No real orders are sent from this page or these accounts.</p>
+    <div class="status" id="status"></div>
+  </header>
+
+  <section class="tiles" aria-label="Headline figures">
+    <div class="tile"><div class="lbl">Leading account</div><div class="val" id="t-lead">—</div><div class="sub" id="t-lead-sub">—</div></div>
+    <div class="tile"><div class="lbl">Accounts in profit</div><div class="val" id="t-profit">—</div><div class="sub" id="t-profit-sub">—</div></div>
+    <div class="tile"><div class="lbl">Closed trades, all accounts</div><div class="val" id="t-closed">—</div><div class="sub" id="t-closed-sub">—</div></div>
+    <div class="tile"><div class="lbl">AI spend so far</div><div class="val" id="t-ai">—</div><div class="sub">Claude API, all AI accounts</div></div>
+  </section>
+
+  <section class="card">
+    <h2>Return over time</h2>
+    <p class="note">Net return of each account that has traded, in toman after fees, sampled every 5 minutes. The three best are colored; hover to compare every account at that moment.</p>
+    <div class="chart" id="chart"></div>
+    <p class="note" id="chart-note"></p>
+  </section>
+
+  <section class="card">
+    <h2>Leaderboard</h2>
+    <p class="note">Max drawdown is the largest fall from the account's own peak. Closed trades count completed sells.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Account</th><th>Approach</th><th class="hide-narrow">AI model</th><th class="num">Return %</th><th class="num">Max drawdown %</th>
+        <th class="num">Closed trades</th><th class="num hide-narrow">Profitable</th><th class="num hide-narrow">Fees (TMN)</th><th class="num hide-narrow">AI cost ($)</th><th class="num hide-narrow">Open</th></tr></thead>
+      <tbody id="board"></tbody>
+    </table></div>
+  </section>
+
+  <section class="card">
+    <h2>Recent trades</h2>
+    <p class="note">Latest fills across all accounts, newest first, with the reason the strategy or AI gave. "maker" fills were limit orders, counted only when real Wallex trades crossed the price.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Time (UTC)</th><th>Account</th><th>Market</th><th>Side</th><th class="num">Value (TMN)</th><th class="num">P&amp;L (TMN)</th><th class="hide-narrow">Order type</th><th class="hide-narrow">Reason</th></tr></thead>
+      <tbody id="trades"></tbody>
+    </table></div>
+  </section>
+</div>
+
+<script>
+const fmt = d3.format(',');
+const signed = (v, d = 3) => (v > 0 ? '+' : '') + v.toFixed(d);
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const text = (id, v) => { document.getElementById(id).textContent = v; };
+let last = null;
+
+async function load() {
+  const get = name => fetch('data/' + name + '?t=' + Date.now(), { cache: 'no-store' }).then(r => { if (!r.ok) throw new Error(name + ' ' + r.status); return r.json(); });
+  try {
+    const [board, equity, trades, health] = await Promise.all([get('leaderboard.json'), get('equity.json'), get('trades.json'), get('health.json')]);
+    last = { board, equity, trades, health };
+    render();
+  } catch (e) {
+    text('take', 'Could not load the arena data (' + e.message + '). Retrying in 30 seconds.');
+  }
+}
+
+function render() {
+  if (!last) return;
+  const { board, equity, trades, health } = last;
+  const sorted = board.slice().sort((a, b) => b.return_pct - a.return_pct);
+  const traded = sorted.filter(r => r.fills > 0);
+  const idle = board.length - traded.length;
+  const lead = traded[0];
+  const inProfit = board.filter(r => r.return_pct > 0).length;
+  const closed = d3.sum(board, r => r.closed_trades), wins = d3.sum(board, r => r.winning_trades);
+  text('take', (lead ? `Best trading account: ${lead.account} at ${signed(lead.return_pct, 2)}%. ` : 'No account has traded yet. ') +
+    `${inProfit} of ${board.length} accounts are in profit after fees; ${wins} of ${closed} closed trades made money; ${idle} accounts have not traded yet.`);
+  text('t-lead', lead ? signed(lead.return_pct, 2) + '%' : '—'); text('t-lead-sub', lead ? lead.account + ' · ' + lead.approach : 'No trades yet');
+  text('t-profit', fmt(inProfit)); text('t-profit-sub', 'of ' + board.length + ' accounts');
+  text('t-closed', fmt(closed)); text('t-closed-sub', fmt(wins) + ' profitable');
+  text('t-ai', '$' + d3.sum(board, r => r.ai_cost_usd).toFixed(2));
+
+  const st = document.getElementById('status'); st.innerHTML = '';
+  const chip = (cls, label) => { const c = document.createElement('span'); c.className = 'chip ' + cls; c.textContent = label; st.appendChild(c); };
+  const age = Math.round(Date.now() / 1000 - health.updated_at);
+  chip(age < 120 ? 'ok' : 'bad', `Engine ${age < 120 ? 'running' : 'stale'} · updated ${age}s ago`);
+  if (health.wallex_stream) chip(health.wallex_stream.connected === health.wallex_stream.connections ? 'ok' : 'warn',
+    `Wallex stream ${health.wallex_stream.connected}/${health.wallex_stream.connections} · price age ${health.wallex_stream.symbol_age_median}s`);
+  if (health.binance_stream) chip(health.binance_stream.last_message_age != null && health.binance_stream.last_message_age < 10 ? 'ok' : 'warn',
+    `Binance stream · ${health.binance_stream.pairs} coins`);
+  chip(health.usdt_tmn_halted ? 'warn' : 'ok', `USDT/TMN ${fmt(Math.round(health.usdt_tmn))}${health.usdt_tmn_halted ? ' · market closed' : ''}`);
+  if (health.guarded && health.guarded.length) chip('warn', 'Drop guard on: ' + health.guarded.join(', '));
+  chip('', `Final settlement ${health.liquidate_at_utc}`);
+
+  const tb = document.getElementById('board'); tb.innerHTML = '';
+  sorted.forEach(r => {
+    const tr = tb.insertRow();
+    [[r.account, ''], [r.approach, ''], [r.model, 'hide-narrow'], [signed(r.return_pct), 'num ' + (r.return_pct > 0 ? 'pos' : r.return_pct < 0 ? 'neg' : '')],
+     [r.max_drawdown_pct.toFixed(3), 'num'], [fmt(r.closed_trades), 'num'], [fmt(r.winning_trades), 'num hide-narrow'],
+     [fmt(r.fees_tmn), 'num hide-narrow'], [r.ai_cost_usd.toFixed(2), 'num hide-narrow'], [fmt(r.open_positions), 'num hide-narrow']]
+      .forEach(([v, c]) => { const td = tr.insertCell(); td.textContent = v; td.className = c; });
+  });
+
+  const tt = document.getElementById('trades'); tt.innerHTML = '';
+  trades.forEach(r => {
+    const tr = tt.insertRow();
+    const pnl = r.pnl_tmn == null ? '' : (r.pnl_tmn > 0 ? '+' : '') + fmt(r.pnl_tmn);
+    [[r.time.slice(11, 16), 'mono'], [r.account, ''], [r.market, ''], [r.side, ''], [fmt(r.value_tmn), 'num'],
+     [pnl, 'num ' + (r.pnl_tmn > 0 ? 'pos' : r.pnl_tmn < 0 ? 'neg' : '')], [r.liquidity, 'hide-narrow pill-cell'], [r.reason, 'reason hide-narrow']]
+      .forEach(([v, c]) => {
+        const td = tr.insertCell(); td.className = c.replace('pill-cell', '');
+        if (c.includes('pill-cell')) { const s = document.createElement('span'); s.className = 'pill'; s.textContent = v; td.appendChild(s); }
+        else td.textContent = v;
+      });
+  });
+  drawChart(equity, new Set(traded.map(r => r.account)), sorted.filter(r => r.fills === 0).map(r => r.account));
+}
+
+function drawChart(equity, traded, idle) {
+  const box = document.getElementById('chart'); box.innerHTML = '';
+  text('chart-note', idle.length ? `Not shown (no trades yet, flat at 0%): ${idle.join(', ')}.` : '');
+  const colors = [css('--accent'), css('--s2'), css('--s3')], muted = css('--mutedline');
+  const rows = equity.filter(r => traded.has(r.account)).map(r => ({ account: r.account, time: new Date(r.time), v: +r.return_pct }));
+  if (!rows.length) return;
+  const series = d3.groups(rows, r => r.account).map(([account, pts]) => ({ account, pts: pts.sort((a, b) => a.time - b.time) }));
+  series.forEach(s => { s.last = s.pts[s.pts.length - 1]; });
+  const leaders = series.slice().sort((a, b) => b.last.v - a.last.v).slice(0, 3).map(s => s.account);
+  const color = a => leaders.includes(a) ? colors[leaders.indexOf(a)] : muted;
+  const W = box.clientWidth || 800, H = 340, bottom = 28;
+  const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+  const ext = d3.extent(rows, r => r.v); ext[0] = Math.min(ext[0], 0); ext[1] = Math.max(ext[1], 0);
+  const pad = (ext[1] - ext[0]) * 0.08 || 0.1;
+  const y = d3.scaleLinear([ext[0] - pad, ext[1] + pad], [H - bottom, 10]);
+  const yt = y.ticks(6);
+  const probe = svg.append('text').attr('font-size', 11).style('visibility', 'hidden');
+  const leftW = d3.max(yt, t => probe.text(t.toFixed(2) + '%').node().getComputedTextLength()) + 8;
+  const endW = d3.max(leaders, a => probe.text(a + ' ' + signed(series.find(s => s.account === a).last.v, 2) + '%').node().getComputedTextLength()) + 10;
+  probe.remove();
+  const right = W < 560 ? 8 : endW;
+  const x = d3.scaleUtc(d3.extent(rows, r => r.time), [leftW, W - right]);
+  svg.append('g').selectAll('line').data(yt).join('line').attr('x1', leftW).attr('x2', W - right).attr('y1', y).attr('y2', y).attr('stroke', css('--line'));
+  svg.append('line').attr('x1', leftW).attr('x2', W - right).attr('y1', y(0)).attr('y2', y(0)).attr('stroke', css('--muted')).attr('stroke-dasharray', '4 3');
+  svg.append('g').selectAll('text').data(yt).join('text').attr('x', leftW - 6).attr('y', y).attr('dy', '0.32em').attr('text-anchor', 'end')
+    .attr('fill', css('--muted')).attr('font-size', 11).text(t => t.toFixed(2) + '%');
+  const gx = svg.append('g').attr('transform', `translate(0,${H - bottom})`)
+    .call(d3.axisBottom(x).ticks(Math.max(2, Math.floor((W - leftW - right) / 90))).tickFormat(d3.utcFormat('%H:%M')).tickSizeOuter(0))
+    .attr('font-size', null).attr('font-family', null);
+  gx.selectAll('text').attr('fill', css('--muted')).attr('font-size', 11); gx.selectAll('line,path').attr('stroke', css('--line'));
+  const line = d3.line().x(p => x(p.time)).y(p => y(p.v));
+  const ordered = series.slice().sort((a, b) => leaders.includes(a.account) - leaders.includes(b.account));
+  svg.append('g').selectAll('path').data(ordered).join('path').attr('d', s => line(s.pts)).attr('fill', 'none').attr('stroke', s => color(s.account))
+    .attr('stroke-width', s => leaders.includes(s.account) ? 2 : 1.25).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+  if (W >= 560) {
+    const labels = leaders.map((a, i) => { const s = series.find(z => z.account === a); return { a, i, y: y(s.last.v), v: s.last.v }; }).sort((p, q) => p.y - q.y);
+    for (let k = 1; k < labels.length; k++) labels[k].y = Math.max(labels[k].y, labels[k - 1].y + 14);
+    svg.append('g').selectAll('text').data(labels).join('text').attr('x', W - right + 6).attr('y', l => l.y).attr('dy', '0.32em').attr('font-size', 11)
+      .attr('fill', l => colors[l.i]).text(l => l.a + ' ' + signed(l.v, 2) + '%');
+  }
+  const tip = document.createElement('div'); tip.className = 'tip'; tip.hidden = true; box.appendChild(tip);
+  const rule = svg.append('line').attr('y1', 10).attr('y2', H - bottom).attr('stroke', css('--muted')).style('display', 'none');
+  const times = Array.from(new Set(rows.map(r => +r.time))).sort((a, b) => a - b);
+  svg.append('rect').attr('x', leftW).attr('y', 0).attr('width', W - right - leftW).attr('height', H - bottom).attr('fill', 'transparent')
+    .on('pointermove', ev => {
+      const [mx] = d3.pointer(ev);
+      const t = times[Math.min(times.length - 1, d3.bisectCenter(times, +x.invert(mx)))];
+      rule.attr('x1', x(t)).attr('x2', x(t)).style('display', null);
+      tip.innerHTML = '';
+      const h = document.createElement('div'); h.className = 't'; h.textContent = d3.utcFormat('%H:%M UTC')(new Date(t)); tip.appendChild(h);
+      series.map(s => ({ a: s.account, p: s.pts.reduce((b, q) => Math.abs(q.time - t) < Math.abs(b.time - t) ? q : b) }))
+        .filter(o => Math.abs(o.p.time - t) < 6 * 60 * 1000)
+        .sort((m, n) => n.p.v - m.p.v)
+        .forEach(o => {
+          const row = document.createElement('div'); row.className = 'row';
+          const sw = document.createElement('span'); sw.className = 'sw'; sw.style.background = color(o.a);
+          const tx = document.createElement('span'); tx.textContent = o.a + '  ' + signed(o.p.v) + '%';
+          row.append(sw, tx); tip.appendChild(row);
+        });
+      tip.hidden = false;
+      const bw = box.clientWidth, tw = tip.offsetWidth;
+      const px = x(t) / W * bw; tip.style.left = (px + 12 + tw > bw ? Math.max(0, px - tw - 12) : px + 12) + 'px'; tip.style.top = '8px';
+    })
+    .on('pointerleave', () => { tip.hidden = true; rule.style('display', 'none'); });
+}
+
+load();
+setInterval(load, 30000);
+let resizeTimer; window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(render, 200); });
+</script>
+</body>
+</html>

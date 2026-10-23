@@ -1,0 +1,17 @@
+{
+  "initial_cash": "5000000",
+  "fee_rate": "0.0035",
+  "slippage": "0.001",
+  "min_order_tmn": "100000",
+  "max_position_fraction": "0.20",
+  "risk_fraction": "0.005",
+  "stop_fraction": "0.01",
+  "take_fraction": "0.02",
+  "max_drawdown": "0.03",
+  "volume_participation": "0.01",
+  "buy_probability": 0.6,
+  "sell_probability": 0.45,
+  "max_hold_bars": 8,
+  "horizon": 4,
+  "interval_seconds": 3600
+}

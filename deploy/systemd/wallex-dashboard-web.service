@@ -1,0 +1,23 @@
+# Template: rendered by deploy/systemd/install.sh (@@...@@ placeholders).
+# Read-only static dashboard over HTTPS with HTTP Basic auth (user "meowmeow", password from a credential file).
+[Unit]
+Description=Wallex arena dashboard: password-protected HTTPS on port @@DASHBOARD_PORT@@
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 @@APP_DIR@@/services/dashboard_server.py @@DASHBOARD_PORT@@ @@WEB_DIR@@
+DynamicUser=yes
+LoadCredential=tls_cert:@@TLS_CERT@@
+LoadCredential=tls_key:@@TLS_KEY@@
+LoadCredential=password:@@SECRETS_DIR@@/dashboard-password.txt
+Restart=always
+RestartSec=5
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+CapabilityBoundingSet=
+MemoryMax=200M
+
+[Install]
+WantedBy=multi-user.target

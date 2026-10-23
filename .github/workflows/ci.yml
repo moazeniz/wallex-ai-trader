@@ -1,0 +1,227 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:      # reused as the gate of the Deploy workflow
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true   # a newer commit supersedes; Deploy calls this workflow under its own group
+
+jobs:
+  test:
+    name: Lint + tests (Python 3.14)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      OMP_NUM_THREADS: "2"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Lint (correctness)
+        run: ruff check experiments services tests
+      - name: Tests (offline)
+        run: python -m pytest -q
+      - name: Render systemd units
+        run: deploy/systemd/install.sh render && ls build/systemd
+      - name: Shell syntax
+        run: bash -n deploy/systemd/install.sh scripts/backup_state.sh scripts/run.sh
+
+  platform:
+    name: Platform kit (deploy / IaC tooling)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Install tooling
+        run: pip install pyyaml==6.0.3 ruff==0.14.0
+      - name: Lint platform code (strict)
+        run: ruff check --isolated --select E,F,W,B,UP,S --ignore S310,S603,S607,S101,S110,B904,UP007,S108,S202 --line-length 160 --target-version py310 infra
+      - name: Unit tests against a fake Liara API
+        run: python -m unittest discover -s infra/tests -v
+      - name: Validate manifests
+        run: |
+          python - <<'PY'
+          import glob, yaml
+          for f in sorted(glob.glob("infra/*.yaml")):
+              m = yaml.safe_load(open(f))
+              for a in m["apps"]:
+                  for k in ("name", "port", "plan", "bundle", "healthCheck", "smoke"):
+                      assert k in a, f"{f}: {a.get('name')} lacks {k}"
+                  assert "envs" not in a or "values" not in a["envs"], f"{f}: env VALUES must not be in git"
+              print(f"{f}: {len(m['apps'])} app(s) ok")
+          PY
+      - name: Lint workflows (actionlint)
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12 -color
+
+  secrets:
+    name: Secret scan (gitleaks, full history)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Install gitleaks 8.30.1 (checksum-verified)
+        run: |
+          v=8.30.1; base=https://github.com/gitleaks/gitleaks/releases/download/v$v
+          curl -sSfLO "$base/gitleaks_${v}_linux_x64.tar.gz" -O "$base/gitleaks_${v}_checksums.txt"
+          grep "gitleaks_${v}_linux_x64.tar.gz" "gitleaks_${v}_checksums.txt" | sha256sum -c -
+          tar xzf "gitleaks_${v}_linux_x64.tar.gz" gitleaks
+      - name: Scan every commit
+        run: ./gitleaks git . --redact --no-banner --verbose --report-format sarif --report-path gitleaks.sarif
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: gitleaks-report
+          path: gitleaks.sarif
+          retention-days: 14
+
+  dependencies:
+    name: Dependency audit (pip-audit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+      - name: pip-audit (advisory; Dependabot opens the fix PRs)
+        continue-on-error: true
+        run: |
+          pip install pip-audit==2.9.0
+          for req in requirements.txt; do
+            [ -f "$req" ] || continue
+            echo "### pip-audit: \`$req\`" >> "$GITHUB_STEP_SUMMARY"
+            if pip-audit -r "$req" --progress-spinner off --format markdown --desc off > audit.md 2>audit.err; then
+              echo "No known vulnerabilities." >> "$GITHUB_STEP_SUMMARY"
+            else
+              cat audit.md >> "$GITHUB_STEP_SUMMARY"; tail -3 audit.err; status=1
+            fi
+          done
+          exit "${status:-0}"
+
+  image:
+    name: Container image (build, smoke, non-root, SBOM, CVE scan)
+    runs-on: ubuntu-latest
+    needs: [test]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          load: true
+          tags: meowmeow-wallex:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+      - name: Container smoke test
+        run: |
+          docker run -d --name wallex -p 127.0.0.1:8080:8080 -e WALLEX_ADMIN_PASSWORD=ci meowmeow-wallex:ci
+          for _ in $(seq 1 30); do curl -fs http://127.0.0.1:8080/healthz && break; sleep 1; done
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/live)" = 401
+          curl -fs -u admin:ci http://127.0.0.1:8080/api/live | python3 -c "import json,sys; s=json.load(sys.stdin)['state']; assert not s['armed'] and s['kill_file_present'], s"
+          uid=$(docker exec wallex awk '/^Uid/{print $2}' /proc/1/status)
+          echo "main process uid: $uid"
+          # Advisory until the image drops privileges (see docs/DEPLOYMENT.md, container hardening).
+          [ "$uid" != 0 ] || echo "::warning::meowmeow-wallex container runs as root"
+          docker rm -f wallex
+      - name: Image facts (size, user, no secrets baked in)
+        run: |
+          img=meowmeow-wallex:ci
+          size=$(docker image inspect "$img" -f '{{.Size}}')
+          echo "### Image \`$img\`: $((size/1024/1024)) MB, $(docker history -q "$img" | wc -l) layers" >> "$GITHUB_STEP_SUMMARY"
+          # No env files, keys or VCS metadata may ship inside the image.
+          if docker run --rm --entrypoint sh "$img" -c 'find / -xdev \( -name ".env" -o -name "*.pem" -o -name "*.key" -o -name ".git" -o -name "id_rsa" \) -not -path "/proc/*" -not -path "/usr/*" -not -path "/etc/ssl/*" 2>/dev/null' | grep .; then
+            echo "::error::secret-like files found in the image"; exit 1
+          fi
+          docker image inspect "$img" -f 'Env keys: {{range .Config.Env}}{{.}} {{end}}' | sed -E 's/=[^ ]*//g'
+      - name: SBOM (SPDX + CycloneDX)
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          image: meowmeow-wallex:ci
+          format: spdx-json
+          output-file: sbom.spdx.json
+          upload-artifact: false
+      - name: SBOM (CycloneDX)
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          image: meowmeow-wallex:ci
+          format: cyclonedx-json
+          output-file: sbom.cdx.json
+          upload-artifact: false
+      - name: CVE scan (Trivy, report only)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: meowmeow-wallex:ci
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          format: table
+          output: trivy.txt
+          exit-code: "0"
+      - name: Publish scan summary
+        if: always()
+        run: |
+          { echo "### Trivy (CRITICAL/HIGH with a fix available)"; echo '```'; head -c 60000 trivy.txt 2>/dev/null || echo "no report"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: sbom-and-scan
+          path: |
+            sbom.spdx.json
+            sbom.cdx.json
+            trivy.txt
+          retention-days: 30
+
+  liara-preflight:
+    name: Liara preflight (read-only dry run + drift plan)
+    runs-on: ubuntu-latest
+    needs: [platform]
+    # only the canonical repository holds the Liara credentials (copies of the repo skip this job)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'moazeniz/wallex-ai-trader'
+    timeout-minutes: 10
+    env:
+      LIARA_API_TOKEN: ${{ secrets.LIARA_API_TOKEN }}
+      LIARA_TEAM_ID: ${{ secrets.LIARA_TEAM_ID }}
+      LIARA_API_BASE: https://api.iran.liara.ir
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml==6.0.3
+      - name: Release dry run (package + release body + read-only preflight; nothing is deployed)
+        if: env.LIARA_API_TOKEN != ''
+        run: |
+          python infra/liara_deploy.py deploy --manifest infra/liara.app.yaml --dry-run --message "ci-${GITHUB_SHA::7}"
+      - name: Infrastructure drift (liara_apply.py plan, GET requests only)
+        if: env.LIARA_API_TOKEN != ''
+        run: |
+          set +e
+          python infra/liara_apply.py plan -f infra/liara.app.yaml --no-color > plan.txt 2>&1
+          code=$?
+          { echo "### Liara drift plan"; echo '```'; cat plan.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          [ $code -eq 1 ] && { echo "::error::manifest is invalid for the live account"; exit 1; }
+          [ $code -eq 2 ] && echo "::warning::live Liara state drifted from infra/ manifests (see summary)"
+          exit 0
+      - name: No credentials configured
+        if: env.LIARA_API_TOKEN == ''
+        run: echo "::notice::LIARA_API_TOKEN secret not set; skipping Liara preflight"

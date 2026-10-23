@@ -1,0 +1,61 @@
+{
+  "boundaries": [
+    1787472000.0,
+    1790064000.0,
+    1791100800.0,
+    1792656000.0
+  ],
+  "candidate_suite": [
+    "ridge",
+    "tree",
+    "ensemble",
+    "zero",
+    "trend"
+  ],
+  "code_sha256": "8bc4521196bed933146a3ce48f36913f990ab2a20d89b8e1cc8889e3999d55b1",
+  "config_hash": "e5b82d4912923e44c4af5ecebf202a1ceccac8830cc5405caf3ba689f66cfa0e",
+  "dataset_hashes": {
+    "APETMN": "1a1641073adb4f7fbd01ddec88dd827371dca1b59555974e1e4256fd47e65402",
+    "ARBTMN": "de4fa751f395cb9afa52198470f370873e254bfdd4c428f894278d3aa7450a76",
+    "BTCTMN": "03ff7b83beb4478532312d16402f52829540897b9decc022d0dbc80eb16146eb",
+    "DOGETMN": "24ba02623caca1b964b8ec9b5fc2ee9b87d595d5c66299e6b8dec70d13ded04e",
+    "ETHTMN": "129aa23dde0023e6d02309fdc588b72c4395be3041cc0fab3458962f013c449c",
+    "LTCTMN": "9c56e05fa59a5fb49e48365f639f48f0a8c95ac3d5f82c3746b7b46303454f8c",
+    "PEPETMN": "02f1c841a7a7b43680f94218116d7659917aa99568093c23112f64e24501ccd7",
+    "PUMPTMN": "dee7fe633f0f51c5669385f23d7ca3229be2e4f782c2ebe47163cd90927bba69",
+    "SOLTMN": "c2b3a22874b0fb8586409e0024733c3d0296ac31518c8eb8d9ecd278546772f4",
+    "STMN": "ce1476fbcf0bf1462382ae4f6d4b363d669244a6e4f11d712ea4d1cb19949e9d",
+    "SUITMN": "05f807e5933ca6b456c56ed52c3313f7f120e2813fe218242cad844c227ae3e6",
+    "TRXTMN": "b7e7ab612bd5034394e86a534266165c2186a5415e5d9e237d76df8a97c5fe24",
+    "USDTTMN": "cec1d5b90616ddad1852647cc57d5b558ca20f22efc3d5e08c75143d9f83f36b",
+    "USOONTMN": "04530ae2de6d14a6ac15bfc305e2ab3f758fa69fd5de6301d6b3828548a961ad",
+    "XAUTTMN": "61c4be7dc91b8588025ef820b9fadb80cd00817d36f47fd4460c6eb98d3b31ed",
+    "XRPTMN": "3bdff57b34691dcc9d277d3f44ccb9fa06312774bd37e20089564badada7710a"
+  },
+  "fee_rate_per_side": 0.0035,
+  "horizon_hours": 8,
+  "minimum_net_edge": 0.002,
+  "primary": "calibration_selected",
+  "ridge_alpha": 10,
+  "schema_version": 1,
+  "selection": "calibration-only >=3 trades, positive baseline and delay; max min(base,delay); cash otherwise",
+  "selection_mode": "calibration_only",
+  "slippage_rate_per_side": 0.001,
+  "tree_settings": {
+    "colsample_bytree": 0.8,
+    "device": "cpu",
+    "learning_rate": 0.03,
+    "max_depth": 3,
+    "min_child_weight": 20,
+    "n_estimators": 300,
+    "n_jobs": 4,
+    "objective": "reg:squarederror",
+    "random_state": 42,
+    "reg_alpha": 0.0,
+    "reg_lambda": 10.0,
+    "subsample": 0.8,
+    "tree_method": "hist"
+  },
+  "trend_cost_gate": true,
+  "warmup_hours": 48
+}

@@ -1,0 +1,12 @@
+# Runtime dependencies for the Wallex trading engine (arena, paper agent, challenge extension, services).
+# Pinned to the versions verified on the production host (Python 3.14.4, 2026-10-22).
+# The book recorder, dashboard exporter and dashboard server use only the standard library.
+anthropic==2.1.0
+pydantic==2.14.1
+websockets==17.3
+numpy==2.4.6
+pandas==3.0.5
+scipy==1.18.1
+scikit-learn==1.9.0
+threadpoolctl==3.7.0
+xgboost==3.2.0

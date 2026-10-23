@@ -1,0 +1,6 @@
+# Reviews required from the platform owner for everything; the release path is listed explicitly.
+*                  @moazeniz
+/.github/           @moazeniz
+/infra/            @moazeniz
+Dockerfile         @moazeniz
+liara.json         @moazeniz

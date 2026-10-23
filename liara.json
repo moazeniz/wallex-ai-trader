@@ -1,0 +1,7 @@
+{
+  "app": "meowmeow-wallex",
+  "platform": "docker",
+  "port": 8080,
+  "disks": [{ "name": "wallex-data", "mountTo": "/data" }],
+  "build": { "dockerfile": "./Dockerfile", "location": "germany" }
+}

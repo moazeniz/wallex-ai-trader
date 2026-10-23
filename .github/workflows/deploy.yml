@@ -1,0 +1,87 @@
+name: Deploy to Liara
+
+# Release pipeline: full CI gate -> package the tagged commit -> Liara release (gitInfo + tag message)
+# -> watch build/health check -> smoke tests -> automatic rollback to the previous release on failure.
+# Triggers: a version tag (v1.2.3) or a manual run. Manual runs default to a dry run.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      app:
+        description: "Liara app (from infra/liara.app.yaml)"
+        type: choice
+        options: [meowmeow-wallex]
+        default: meowmeow-wallex
+      dry_run:
+        description: "Dry run: package + render the release + read-only preflight, deploy nothing"
+        type: boolean
+        default: true
+      auto_rollback:
+        description: "Roll back automatically if the smoke tests fail"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ inputs.app || 'meowmeow-wallex' }}
+  cancel-in-progress: false   # never interrupt a release half-way
+
+jobs:
+  ci:
+    name: CI gate
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+
+  deploy:
+    name: Deploy ${{ inputs.app || 'meowmeow-wallex' }}
+    needs: ci
+    # never from pull requests or copies of the repository; the production environment requires approval
+    if: github.repository == 'moazeniz/wallex-ai-trader' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment:
+      name: production
+      url: ${{ steps.meta.outputs.url }}
+    env:
+      APP: ${{ inputs.app || 'meowmeow-wallex' }}
+      LIARA_API_TOKEN: ${{ secrets.LIARA_API_TOKEN }}
+      LIARA_TEAM_ID: ${{ secrets.LIARA_TEAM_ID }}
+      LIARA_API_BASE: https://api.iran.liara.ir
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0   # tags + commit metadata for gitInfo
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml==6.0.3
+      - id: meta
+        name: Release metadata
+        run: |
+          echo "url=https://${APP}.liara.run" >> "$GITHUB_OUTPUT"
+          echo "message=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+      - name: Credentials present
+        run: test -n "$LIARA_API_TOKEN" && test -n "$LIARA_TEAM_ID" || { echo "::error::set LIARA_API_TOKEN and LIARA_TEAM_ID secrets"; exit 1; }
+      - name: Deploy (dry run)
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run
+        run: python infra/liara_deploy.py deploy --manifest infra/liara.app.yaml --app "$APP" --message "${{ steps.meta.outputs.message }}" --dry-run
+      - name: Deploy + smoke test + automatic rollback
+        id: deploy
+        if: github.event_name == 'push' || !inputs.dry_run
+        run: |
+          set +e
+          python infra/liara_deploy.py deploy --manifest infra/liara.app.yaml --app "$APP" \
+            --message "${{ steps.meta.outputs.message }}" \
+            ${{ (github.event_name == 'workflow_dispatch' && !inputs.auto_rollback) && '--no-rollback' || '' }}
+          code=$?
+          case $code in
+            0) echo "::notice::deployed ${{ steps.meta.outputs.message }} to $APP" ;;
+            1) echo "::error::release failed before traffic moved; the previous release keeps serving" ;;
+            2) echo "::error::smoke tests failed; rolled back automatically to the previous release" ;;
+            3) echo "::error::ROLLBACK FAILED or disabled - page the on-call (docs/OPERATIONS.md, runbook R1)" ;;
+            4) echo "::error::preflight refused the deploy (see summary)" ;;
+          esac
+          exit $code
