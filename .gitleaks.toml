@@ -16,7 +16,7 @@ regexes = [
 description = "Fake credentials in test fixtures (both a test path AND a known fixture value must match)"
 condition = "AND"
 paths = ['''(^|/)tests/.*''']
-regexes = ['''test-token|t0ken-for-tests|supersecrettokenvalue|s3cr3t-value|from-vault|tok-xyz-123456|sk-live-123456789abc|ingest-test-token|leaked-root-pw-123|abcdef123456|admin-test-token|read-test-token''']
+regexes = ['''test-token|t0ken-for-tests|supersecrettokenvalue|s3cr3t-value|from-vault|tok-xyz-123456|sk-live-123456789abc|ingest-test-token|leaked-root-pw-123|abcdef123456|admin-test-token|read-test-token|SeCrEt-KeY-0123456789abcdef''']
 
 [[allowlists]]
 description = "Public on-chain contract address used as test data (not a key)"
