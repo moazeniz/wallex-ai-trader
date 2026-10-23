@@ -175,7 +175,8 @@ def test_snapshot_push_ingest_rules_and_serving(tmp_path, monkeypatch):
         info = json.loads(_req(base + "/api/snapshot/info", auth)[2])
         assert info["source"] == "pushed" and info["snapshot_ts"] == 2_000_000_000
         home = _req(base + "/", auth)[2].decode()
-        assert "آخرین به‌روزرسانی" in home and "اختبار سایه/کاغذی" in home and "/api/snapshot/info" in home
+        assert 'class="mm-foot"' in home and 'id="mm-upd"' in home and "/api/snapshot/info" in home   # small footer note
+        assert "mm-banner" not in home and "PAPER / SHADOW TRADING RESULTS" not in home                   # no top banner
         newer = _snap_tar({"www/data/leaderboard.json": b'[{"account":"newer"}]'}, 2_000_000_100)
         assert _req(url, hdr, "POST", newer)[0] == 200
         assert b"newer" in _req(base + "/data/leaderboard.json", auth)[2]

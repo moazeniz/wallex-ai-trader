@@ -1,6 +1,6 @@
 """Password-protected dashboard for meowmeow-wallex on Liara (stdlib only).
 
-/                 arena dashboard over the Hetzner PAPER/SHADOW snapshot (banner with snapshot time)
+/                 arena dashboard over the Hetzner PAPER/SHADOW snapshot (footer note with the update time)
 /live             live engine control: ARMED/DISARMED, engine process, equity, positions, realized PnL, decisions, errors
 /report           shadow-test report (all accounts, every fill with its reason, hash-chain verification)
 /decisions        decision-log viewer (?src=snapshot|live&account=NAME)
@@ -60,7 +60,7 @@ NAV = ('<a href="/">Arena results</a><a href="/live">Live engine</a><a href="/ma
 NAV_PATHS = ["/", "/live", "/market", "/report", "/decisions", "/paper-agent", "/docs"]
 NAV_INLINE = NAV.replace("<a ", '<a style="margin-right:12px;display:inline-block" ')
 # Injected into the arena page so it never scrolls sideways on phones: tables/charts scroll inside their own box.
-MOBILE_CSS = ("<style>.mm-banner a{color:#1f5fbf}@media (max-width:760px){html,body{overflow-x:hidden}"
+MOBILE_CSS = ("<style>.mm-nav a{color:#1f5fbf}@media (max-width:760px){html,body{overflow-x:hidden}"
               "table{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}"
               "svg,canvas,img{max-width:100%;height:auto}pre{white-space:pre-wrap;word-break:break-word}}</style>")
 
@@ -104,19 +104,20 @@ def snapshot_info() -> dict:
             "arena_started_utc": m.get("arena_started_utc"), "files": len(m.get("files") or {})}
 
 
-def updated_line(m: dict) -> str:
-    """Prominent Persian 'last update' line (Tehran and UTC); the page's script refreshes it every 60 s."""
+def footer_note(m: dict) -> str:
+    """Small, unobtrusive footer: these are paper/shadow results, and when they were last updated (refreshed every 60 s)."""
     ts = m.get("snapshot_ts")
     when = (time.strftime("%Y-%m-%d %H:%M", time.gmtime(ts + 12600)) + " تهران / " + time.strftime("%H:%M UTC", time.gmtime(ts))) if ts else "?"
-    return (f'<div dir="rtl" style="font-size:16px;font-weight:700;margin:2px 0 4px">{UPDATED_FA}: <span id="mm-upd">{html.escape(when)}</span> '
-            f'({SHADOW_FA}) <span id="mm-age" style="font-weight:400;font-size:13px"></span></div>')
+    return (f'<div class="mm-foot" dir="rtl" style="font:12px/1.6 system-ui,sans-serif;color:#7d8aa5;text-align:center;padding:14px 16px 18px">'
+            f'نتایج کاغذی / {SHADOW_FA.split("/")[0].strip()} · {UPDATED_FA}: <span id="mm-upd">{html.escape(when)}</span> '
+            f'<span id="mm-age"></span> · paper / shadow results, no real orders</div>')
 
 
 UPDATE_JS = """<script>(function(){const f=n=>String(n).padStart(2,'0');
 function fmt(ts){const t=new Date((ts+12600)*1000),u=new Date(ts*1000);return t.getUTCFullYear()+'-'+f(t.getUTCMonth()+1)+'-'+f(t.getUTCDate())+' '+f(t.getUTCHours())+':'+f(t.getUTCMinutes())+' تهران / '+f(u.getUTCHours())+':'+f(u.getUTCMinutes())+' UTC'}
 async function tick(){try{const d=await (await fetch('/api/snapshot/info',{cache:'no-store'})).json();if(!d.snapshot_ts)return;
 const e=document.getElementById('mm-upd');if(e)e.textContent=fmt(d.snapshot_ts);const a=document.getElementById('mm-age');
-if(a)a.textContent='('+Math.max(0,Math.round(d.age_s/60))+' دقیقه پیش، '+(d.source==='pushed'?'به‌روزرسانی خودکار':'نسخهٔ همراه برنامه')+')';}catch(e){}}
+if(a)a.textContent='('+Math.max(0,Math.round(d.age_s/60))+' دقیقه پیش)';}catch(e){}}
 tick();setInterval(tick,60000);})();</script>"""
 
 
@@ -124,9 +125,7 @@ def page(title, body):
     m = manifest()
     return (f'<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
             f'<title>{html.escape(title)}</title><style>{CSS}</style></head><body><header><b>MeowMeow Wallex</b>{NAV}</header>'
-            f'<div class="banner">{updated_line(m)}<b>Paper / shadow trading results.</b> Snapshot of the Hetzner arena taken {html.escape(m.get("snapshot_utc", "?"))} '
-            f'(arena running since {html.escape(m.get("arena_started_utc", "?"))}); simulated 5,000,000 TMN per account on live Wallex order books, no real orders. '
-            f'Live engine: see <a href="/live">Live engine</a>.</div><main>{body}</main>{UPDATE_JS}</body></html>').encode()
+            f'<main>{body}</main>{footer_note(m)}{UPDATE_JS}</body></html>').encode()
 
 
 def fmt(x, d=0):
@@ -629,15 +628,13 @@ class Handler(BaseHTTPRequestHandler):
                                                             'The live engine control is at <a href="/live">/live</a>.</div>'))
             raw = sp("www/index.html").read_text()
             m = manifest()
-            bar = (f'<div class="mm-banner" style="background:#fff4d6;color:#4a3500;padding:9px 16px;font:13px/1.45 system-ui,sans-serif;border-bottom:1px solid #e8cf86">'
-                   f'{updated_line(m)}<b>PAPER / SHADOW TRADING RESULTS</b>: snapshot of the Hetzner arena taken <b>{html.escape(m.get("snapshot_utc", "?"))}</b> '
-                   f'(running since {html.escape(m.get("arena_started_utc", "?"))}); every account traded a simulated 5,000,000 TMN on live Wallex order books. No real orders. '
-                   f'<div style="margin-top:4px;line-height:1.9">{NAV_INLINE}</div></div>')
+            bar = f'<div class="mm-nav" style="padding:8px 16px;font:13px/1.9 system-ui,sans-serif;border-bottom:1px solid rgba(127,127,127,.25)">{NAV_INLINE}</div>'
             i = raw.find(">", raw.find("<body")) + 1
             h = raw.find("</head>")
             raw = raw[:h] + MOBILE_CSS + raw[h:] if h > 0 else raw
             i = raw.find(">", raw.find("<body")) + 1
-            raw = raw.replace("</body>", UPDATE_JS + "</body>") if "</body>" in raw else raw + UPDATE_JS
+            tail = footer_note(m) + UPDATE_JS
+            raw = raw.replace("</body>", tail + "</body>") if "</body>" in raw else raw + tail
             return self._send(200, (raw[:i] + bar + raw[i:]).encode())
         if path.startswith("/data/"):
             return self._file(sp("www/data"), path[6:])   # the arena page re-fetches these every 30 s
