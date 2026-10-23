@@ -75,3 +75,11 @@ build/
 .DS_Store
 Thumbs.db
 *.bak
+docs/VIDEO_PLAYBOOK*
+docs/*DEMO*SCRIPT*
+docs/demo-script*
+docs/video-shots/
+docs/demo-shots/
+videos
+videos/
+tools/ui/video_playbook_pass.py
