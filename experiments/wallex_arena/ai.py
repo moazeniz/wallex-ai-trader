@@ -495,6 +495,7 @@ class ClaudeTrader:
 
     def _run(self, dashboard: str):
         started = time.time()
+        obs.set_context("ai-" + obs.new_id(6))          # background thread: one request id per AI decision in the logs
         research = self._research(dashboard) if self.mcp is not None else None
         self._research_extra = self._research_text(research)
         failed = []

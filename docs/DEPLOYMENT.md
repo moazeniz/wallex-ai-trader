@@ -81,7 +81,8 @@ replaces the **whole** env list on every update — `deploy_liara.py setenv` mer
 | `WALLEX_MCP_TOOLS` | no | `0` (Liara: `1`) | `1` lets the AI call Wallex MCP market-data tools in a research step before each decision |
 | `WALLEX_MCP_URL` | no | `https://api.wallex.ir/mcp` | Wallex MCP server (Streamable HTTP) |
 | `WALLEX_MCP_MAX_CALLS` | no | `6` | Tool calls the AI may make per decision |
-| `WALLEX_MAX_EXPOSURE` | no | `0.35` | Total maker inventory cap as a fraction of equity (recommended 0.30-0.40; paper-tested 0.45) |
+| `WALLEX_LIVE_STRATEGY` | no | `ai_maker` | Live account: `ai_maker` (Claude-managed limit-order maker, params of the paper `ai_maker_sonnet`) or `macro` (macro allocator: target weights across TMN-priced assets that gain when the toman weakens, params of the paper `macro_sonnet`). Same provider switch, MCP research step, caps and end-of-challenge flatten |
+| `WALLEX_MAX_EXPOSURE` | no | `0.35` | Total exposure cap as a fraction of equity for every live strategy (maker inventory cap and engine `max_exposure`/`max_position_frac`; recommended 0.30-0.40; paper-tested 0.45) |
 | `WALLEX_CHALLENGE_END_UTC` | **set it** | `2026-10-23T20:00:00Z` (placeholder) | Official end of trading. Only realized TMN counts: the engine flattens everything to TMN before it |
 | `WALLEX_FLATTEN_MINUTES` | no | `60` | From this many minutes before the end: cancel all orders and sell every coin to TMN (retried each 30 s per market until flat) |
 | `WALLEX_NO_NEW_ENTRIES_MINUTES` | no | `120` | From this many minutes before the end: no new positions |
