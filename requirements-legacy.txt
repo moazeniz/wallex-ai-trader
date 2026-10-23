@@ -73,4 +73,4 @@ black>=23.0.0
 isort>=5.12.0
 mypy>=1.5.0
 anthropic>=2.1.0
-matplotlib>=3.8
+matplotlib>=3.11.2
