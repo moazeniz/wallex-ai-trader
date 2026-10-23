@@ -23,6 +23,19 @@ dashboard with the paper/shadow results and a live-engine control page. The live
 disarmed**; the LLM goes through **BoxAPI** (`openai/gpt-6.1-sol`, key rotation). Read
 [Safety](#safety-read-before-going-live) before going live.
 
+## Tests & benchmarks · تست‌ها و بنچمارک
+
+> خلاصه: بک‌تست ۷ روزه نشان می‌دهد قیمت والکس از قیمت جهانی عقب می‌ماند (همبستگی ‎−0.367‎ با حرکت ۵ دقیقه‌ی بعد در ۲۹ بازار)؛ ۱۷ حساب کاغذی روی دفتر سفارش زنده‌ی والکس بدون سفارش واقعی مقایسه می‌شوند؛ ۴۷۴ تست آفلاین در CI پاس شده‌اند.
+
+| What | Result | Source |
+|---|---|---|
+| Backtest: Wallex lags the global price (7 days of 1-minute candles, 29 markets) | median correlation of the gap with the next 5-minute Wallex move **−0.367**; best rule **+21.3%** summed per-trade return over 53 trades, positive in 8/10 markets (in-sample; the shadow test is the out-of-sample check) | [docs/results/README.md](docs/results/README.md) |
+| Shadow test on live Wallex order books (no real orders), 17 paper accounts × 5,000,000 TMN with level-1 fees | best account **+0.013%**; BTC hold benchmark −0.320%; every account's max drawdown below 2% | [docs/results/README.md](docs/results/README.md) · [shadow-equity.png](docs/results/shadow-equity.png) |
+| AI decisions in the arena | 317 Haiku calls ($0.59 total) and 46 Opus calls ($3.63 total), each decision written to a hash-chained log | [docs/results/README.md](docs/results/README.md) · [docs/components/arena.md](docs/components/arena.md) |
+| Automated tests (offline, no network, no keys) | **474 passed**, 4 skipped | [green CI run](https://github.com/moazeniz/wallex-ai-trader/actions/runs/39963830886) |
+
+Reproduce: `make install-dev && make test` · `make arena-report STATE=<arena state dir>` rebuilds the shadow-test report from the saved ledgers.
+
 ## How we use Wallex MCP/API
 
 - **Wallex MCP (official server, `https://api.wallex.ir/mcp`):** the AI's research step and the dashboard page `/market`
@@ -130,7 +143,7 @@ outbound HTTPS to `api.wallex.ir` and a global price API.
 ```bash
 git clone <REPO_URL> wallex-trading && cd wallex-trading
 make install-dev            # .venv with runtime + test deps
-make test                   # 430 offline tests; no network, no keys
+make test                   # 474 offline tests; no network, no keys
 
 # The production image locally: dashboard only, engine OFF, DISARMED
 make docker-build
@@ -192,7 +205,7 @@ generated from it (`live_ai_maker`, params of `ai_maker_sonnet`, model `WALLEX_M
 ## Tests
 
 ```bash
-make test         # full suite: 430 passed, 3 skipped (offline; ~1-6 min depending on CPU)
+make test         # full suite: 474 passed, 4 skipped (offline; ~1-6 min depending on CPU)
 make test-arena   # arena, BoxAPI client, live client (fake transport), watchdog, WebSocket feed (69 tests)
 make lint         # ruff correctness checks
 make docker-build # builds the Liara image; the arena checks run inside the build
