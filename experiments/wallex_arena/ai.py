@@ -373,6 +373,7 @@ class ClaudeTrader:
     def _research(self, dashboard: str) -> dict | None:
         """Tool-use loop on the first working provider; returns the calls made and the model's note, or None."""
         from .wallex_mcp import AI_TOOLS, run_ai_tool
+        failed = []
         for provider, model in self.routes:
             t0 = time.time()
             calls: list[dict] = []
@@ -380,13 +381,14 @@ class ClaudeTrader:
                 note = (self._research_anthropic if provider == "anthropic" else self._research_boxapi)(model, dashboard, calls, AI_TOOLS, run_ai_tool)
                 obs.log("llm.call", "info", "research", phase="research", provider=provider, model=model, ok=True, tool_calls=len(calls),
                         tools=[c["tool"] for c in calls], duration_ms=int((time.time() - t0) * 1000))
-                return {"provider": provider, "model": model, "calls": calls, "note": (note or "")[:1500]}
+                return {"provider": provider, "model": model, "calls": calls, "note": (note or "")[:1500], "failed": failed}
             except Exception as exc:
                 obs.log("llm.call", "warn", "research failed", phase="research", provider=provider, model=model, ok=False,
                         error_type=type(exc).__name__, error=str(exc)[:200], duration_ms=int((time.time() - t0) * 1000))
                 if not fallback_worthy(exc):
-                    return {"provider": provider, "model": model, "calls": calls, "note": "", "error": type(exc).__name__}
-        return None
+                    return {"provider": provider, "model": model, "calls": calls, "note": "", "error": type(exc).__name__, "failed": failed}
+                failed.append(provider)
+        return {"provider": None, "model": None, "calls": [], "note": "", "error": "all providers failed", "failed": failed}
 
     def _tool(self, run_ai_tool, calls, name, args):
         if len(calls) >= self.max_tool_calls:
@@ -500,7 +502,10 @@ class ClaudeTrader:
         self._research_extra = self._research_text(research)
         failed = []
         result = None
-        for n, (provider, model) in enumerate(self.routes):
+        # a provider that was unavailable during this cycle's research step is skipped for the decision itself
+        skip = set((research or {}).get("failed") or [])
+        routes = [r for r in self.routes if r[0] not in skip] or self.routes
+        for n, (provider, model) in enumerate(routes):
             t0 = time.time()
             try:
                 result = (self._boxapi if provider == "boxapi" else self._anthropic)(model, dashboard, started)
@@ -512,9 +517,9 @@ class ClaudeTrader:
             except Exception as exc:
                 failed.append({"provider": provider, "model": model, "error": (type(exc).__name__ + ": " + str(exc))[:200]})
                 worthy = fallback_worthy(exc)
-                obs.log("llm.call", "warn" if worthy and n + 1 < len(self.routes) else "error", "provider failed", provider=provider, model=model,
+                obs.log("llm.call", "warn" if worthy and n + 1 < len(routes) else "error", "provider failed", provider=provider, model=model,
                         ok=False, duration_ms=int((time.time() - t0) * 1000), attempt=n + 1, fallback=n > 0, error_type=type(exc).__name__,
-                        error=str(exc)[:200], next_provider=self.routes[n + 1][0] if worthy and n + 1 < len(self.routes) else None)
+                        error=str(exc)[:200], next_provider=routes[n + 1][0] if worthy and n + 1 < len(routes) else None)
                 if not worthy:
                     break
         if result is None:
