@@ -254,3 +254,27 @@ def test_real_public_mcp_candles_and_book():
     assert ob["source"] == "mcp" and ob["best_ask"] > ob["best_bid"] > 0
     names = {t["name"] for t in client.list_tools()}
     assert ALLOWED_TOOLS <= names
+
+
+def test_provider_down_in_research_is_skipped_for_the_decision(tmp_path):
+    import socket as _s
+    anth = []
+
+    def hang(url, body, headers, timeout):
+        anth.append(1)
+        raise _s.timeout("gateway hangs")
+    box = []
+
+    def boxapi(url, body, headers, timeout):
+        b = json.loads(body)
+        box.append(b)
+        if "tools" in b:
+            return 200, json.dumps({"choices": [{"message": {"content": "ok"}}], "usage": {}}).encode()
+        return 200, json.dumps({"choices": [{"message": {"content": json.dumps(DECISION)}, "finish_reason": "stop"}], "usage": {}}).encode()
+    env = {"LLM_PROVIDER": "anthropic", "ANTHROPIC_BASE_URL": "http://gate.test", "ANTHROPIC_AUTH_TOKEN": "t", "BOXAPI_KEYS": "k", "WALLEX_MCP_TOOLS": "1"}
+    tr = ClaudeTrader("claude-haiku-5-5", tmp_path / "k", Budget(tmp_path / "b.sqlite", 5), schema=MakerDecision, env=env, mcp=mcp(FakeTransport(rpc_ok({}))))
+    tr.clients["anthropic"].transport = hang
+    tr.clients["boxapi"].transport = boxapi
+    tr._run("{}")
+    r = tr.take()
+    assert r["ok"] and r["provider"] == "boxapi" and len(anth) == 1 and r["research"]["provider"] == "boxapi"   # the gate is tried once, not twice
