@@ -13,7 +13,6 @@
 >
 > The page's **AI self-test** made one real model call, answered by `claude-sonnet-5-5` through the team's Anthropic relay in 5.3 s, with `openai/gpt-6.1-sol` on BoxAPI as the automatic fallback route.
 >
-> **Not working:** the `/paper-agent` page returns an internal error. The demo script is [`DEMO_VIDEO_SCRIPT.fa.md`](DEMO_VIDEO_SCRIPT.fa.md).
 
 **Status legend** used throughout this document:
 
