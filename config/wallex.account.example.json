@@ -1,0 +1,7 @@
+{
+  "approved_markets": [],
+  "official_cutoff_utc": null,
+  "settlement_buffer_seconds": 1800,
+  "account_verified": false,
+  "fee_verified": false
+}

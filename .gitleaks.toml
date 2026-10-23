@@ -1,0 +1,23 @@
+# gitleaks configuration: the default rule set plus reviewed false positives.
+title = "meowmeow gitleaks config"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Documentation placeholders and shell substitutions, never literal credentials"
+regexTarget = "line"
+regexes = [
+  '''curl[^\n]*-u [A-Za-z0-9_.-]+:("\$\(|'?<|\$[A-Z_]+|ci\b)''',
+  '''<redacted>|<REDACTED>|\*\*\*''',
+]
+
+[[allowlists]]
+description = "Fake credentials in test fixtures (both a test path AND a known fixture value must match)"
+condition = "AND"
+paths = ['''(^|/)tests/.*''']
+regexes = ['''test-token|t0ken-for-tests|supersecrettokenvalue|s3cr3t-value|from-vault|tok-xyz-123456|sk-live-123456789abc|ingest-test-token|leaked-root-pw-123|abcdef123456|admin-test-token|read-test-token''']
+
+[[allowlists]]
+description = "Public on-chain contract address used as test data (not a key)"
+regexes = ['''0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9''']

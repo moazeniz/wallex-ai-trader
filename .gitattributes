@@ -1,0 +1,6 @@
+* text=auto eol=lf
+*.json text
+*.py text diff=python
+*.bat text eol=crlf
+# Legacy model weights are distributed via Git LFS if they are ever added.
+*.pkl filter=lfs diff=lfs merge=lfs -text

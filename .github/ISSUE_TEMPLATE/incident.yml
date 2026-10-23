@@ -1,0 +1,36 @@
+name: Incident / postmortem
+description: Production impact on a Liara app. Open during the incident, complete the postmortem afterwards.
+labels: [incident]
+body:
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options: ["SEV1 - app down / data at risk", "SEV2 - major feature broken", "SEV3 - degraded / SLO burn"]
+    validations:
+      required: true
+  - type: input
+    id: app
+    attributes:
+      label: App(s) and URL
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact (who, what, how long; status page / probe numbers)
+    validations:
+      required: true
+  - type: textarea
+    id: timeline
+    attributes:
+      label: Timeline (UTC) - detection, mitigation, resolution
+      placeholder: "16:02 probe DOWN (2 failures)\n16:04 rollback to v12 (runbook R1)\n16:07 smoke tests green"
+  - type: textarea
+    id: cause
+    attributes:
+      label: Root cause and trigger
+  - type: textarea
+    id: actions
+    attributes:
+      label: Action items (owner, due date)

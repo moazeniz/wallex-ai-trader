@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@mathieuc/tradingview": "4.0.0"
+  }
+}

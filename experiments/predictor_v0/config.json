@@ -1,0 +1,20 @@
+{
+  "experiment_id": "crypto_4h_tree_v0",
+  "symbols": ["BTCUSDT", "ETHUSDT"],
+  "venue": "binance_spot",
+  "interval": "1h",
+  "raw_start_utc": "2022-12-01T00:00:00Z",
+  "sample_start_utc": "2023-01-01T00:00:00Z",
+  "train_end_utc": "2025-07-01T00:00:00Z",
+  "development_end_utc": "2026-01-01T00:00:00Z",
+  "holdout_end_utc": "2026-09-01T00:00:00Z",
+  "horizon_hours": 4,
+  "fee_bps_per_side": 10.0,
+  "slippage_bps_per_side": 5.0,
+  "minimum_predicted_net_return": 0.001,
+  "opportunity_hours_utc": [0, 4, 8, 12, 16, 20],
+  "seed": 42,
+  "max_threads": 4,
+  "initial_equity": 10000.0,
+  "mode": "paper_only"
+}

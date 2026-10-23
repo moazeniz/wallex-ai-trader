@@ -1,0 +1,363 @@
+{
+ "comment": "Paper-only arena. Every account starts with 5,000,000 TMN. Final TMN liquidation at liquidate_at_utc (22:30 Tehran, 2026-10-23); no new entries in the final hour.",
+ "liquidate_at_utc": "2026-10-23T19:00:00Z",
+ "tick_seconds": 2,
+ "focus_markets": 45,
+ "accounts": [
+  {
+   "name": "lag_strict",
+   "class": "LagReversion",
+   "params": {
+    "threshold": 0.012,
+    "edge": 0.002,
+    "stop": 0.04,
+    "hold_minutes": 120,
+    "size_frac": 0.3,
+    "max_positions": 4,
+    "max_spread": 0.012,
+    "min_vol24_tmn": 3000000000.0
+   }
+  },
+  {
+   "name": "lag_loose",
+   "class": "LagReversion",
+   "params": {
+    "threshold": 0.008,
+    "edge": 0.002,
+    "stop": 0.04,
+    "hold_minutes": 120,
+    "size_frac": 0.3,
+    "max_positions": 4,
+    "max_spread": 0.012,
+    "min_vol24_tmn": 3000000000.0
+   }
+  },
+  {
+   "name": "maker",
+   "class": "FairValueMaker",
+   "params": {
+    "margin": 0.004,
+    "min_spread": 0.006,
+    "max_spread": 0.03,
+    "size_frac": 0.15,
+    "max_symbols": 5,
+    "max_exposure": 0.6,
+    "stop": 0.03,
+    "hold_minutes": 360,
+    "min_profit": 0.001
+   },
+   "risk": {
+    "fast_guard": false
+   }
+  },
+  {
+   "name": "maker_v2",
+   "class": "FairValueMaker",
+   "params": {
+    "margin": 0.004,
+    "min_spread": 0.006,
+    "max_spread": 0.03,
+    "size_frac": 0.07,
+    "max_symbols": 8,
+    "max_exposure": 0.45,
+    "stop": 0.03,
+    "hold_minutes": 360,
+    "min_profit": 0.001,
+    "protections": true,
+    "cooldown_minutes": 20,
+    "max_inventories": 6,
+    "pull_on_drop": 0.004,
+    "relax_after_minutes": 60,
+    "wind_down_minutes": 180
+   }
+  },
+  {
+   "name": "maker_stable",
+   "class": "FairValueMaker",
+   "comment": "Quotes only USDC/TMN: ~2% spread, price pegged to the dollar, so inventory risk is the rial only.",
+   "params": {
+    "symbols": [
+     "USDCTMN"
+    ],
+    "margin": 0.004,
+    "min_spread": 0.0,
+    "max_spread": 0.05,
+    "size_frac": 0.2,
+    "max_symbols": 1,
+    "max_exposure": 0.6,
+    "stop": 0.02,
+    "hold_minutes": 720,
+    "min_profit": 0.001,
+    "protections": true,
+    "cooldown_minutes": 2,
+    "max_inventories": 1,
+    "pull_on_drop": 0.004,
+    "relax_after_minutes": 240,
+    "wind_down_minutes": 180,
+    "trend_4h_limit": 0.02,
+    "trend_12h_limit": 0.04
+   }
+  },
+  {
+   "name": "maker_wide",
+   "class": "FairValueMaker",
+   "params": {
+    "margin": 0.006,
+    "min_spread": 0.006,
+    "max_spread": 0.03,
+    "size_frac": 0.15,
+    "max_symbols": 5,
+    "max_exposure": 0.6,
+    "stop": 0.03,
+    "hold_minutes": 360,
+    "min_profit": 0.001
+   }
+  },
+  {
+   "name": "maker_tight",
+   "class": "FairValueMaker",
+   "params": {
+    "margin": 0.003,
+    "min_spread": 0.006,
+    "max_spread": 0.03,
+    "size_frac": 0.2,
+    "max_symbols": 6,
+    "max_exposure": 0.8,
+    "stop": 0.03,
+    "hold_minutes": 360,
+    "min_profit": 0.001
+   }
+  },
+  {
+   "name": "ai_maker_haiku",
+   "class": "AIMaker",
+   "params": {
+    "model": "claude-haiku-5-5",
+    "interval_s": 900,
+    "daily_usd": 3,
+    "threshold": 0.008,
+    "maker": {
+     "margin": 0.004,
+     "min_spread": 0.006,
+     "max_spread": 0.03,
+     "size_frac": 0.15,
+     "max_symbols": 5,
+     "max_exposure": 0.45,
+     "stop": 0.03,
+     "hold_minutes": 360,
+     "min_profit": 0.001,
+     "protections": true,
+     "cooldown_minutes": 20,
+     "max_inventories": 6,
+     "pull_on_drop": 0.004,
+     "relax_after_minutes": 60,
+     "wind_down_minutes": 180
+    },
+    "guardrail": {
+     "spread_min": 0.005,
+     "spread_max": 0.03,
+     "margin_min": 0.0025,
+     "margin_max": 0.01,
+     "size_max": 0.08
+    }
+   }
+  },
+  {
+   "name": "ai_maker_sonnet",
+   "class": "AIMaker",
+   "params": {
+    "model": "claude-haiku-5-5",
+    "interval_s": 900,
+    "daily_usd": 3,
+    "threshold": 0.008,
+    "maker": {
+     "margin": 0.004,
+     "min_spread": 0.006,
+     "max_spread": 0.03,
+     "size_frac": 0.15,
+     "max_symbols": 5,
+     "max_exposure": 0.45,
+     "stop": 0.03,
+     "hold_minutes": 360,
+     "min_profit": 0.001,
+     "protections": true,
+     "cooldown_minutes": 20,
+     "max_inventories": 6,
+     "pull_on_drop": 0.004,
+     "relax_after_minutes": 60,
+     "wind_down_minutes": 180
+    },
+    "guardrail": {
+     "spread_min": 0.005,
+     "spread_max": 0.03,
+     "margin_min": 0.0025,
+     "margin_max": 0.01,
+     "size_max": 0.08
+    }
+   }
+  },
+  {
+   "name": "ai_haiku_solo",
+   "class": "AITrader",
+   "params": {
+    "model": "claude-haiku-5-5",
+    "mode": "solo",
+    "interval_s": 300,
+    "daily_usd": 3,
+    "threshold": 0.008
+   }
+  },
+  {
+   "name": "ai_haiku_hybrid",
+   "class": "AITrader",
+   "params": {
+    "model": "claude-haiku-5-5",
+    "mode": "hybrid",
+    "interval_s": 300,
+    "daily_usd": 3,
+    "threshold": 0.008
+   }
+  },
+  {
+   "name": "ai_sonnet_hybrid",
+   "class": "AITrader",
+   "params": {
+    "model": "claude-haiku-5-5",
+    "mode": "hybrid",
+    "interval_s": 600,
+    "daily_usd": 3,
+    "threshold": 0.008
+   }
+  },
+  {
+   "name": "ai_opus_hybrid",
+   "class": "AITrader",
+   "params": {
+    "model": "claude-haiku-5-5",
+    "mode": "hybrid",
+    "interval_s": 900,
+    "daily_usd": 3,
+    "threshold": 0.008
+   }
+  },
+  {
+   "name": "ai_haiku_active",
+   "class": "AITrader",
+   "params": {
+    "model": "claude-haiku-5-5",
+    "mode": "hybrid",
+    "style": "active",
+    "interval_s": 300,
+    "daily_usd": 3,
+    "threshold": 0.008
+   }
+  },
+  {
+   "name": "ai_sonnet_active",
+   "class": "AITrader",
+   "params": {
+    "model": "claude-haiku-5-5",
+    "mode": "hybrid",
+    "style": "active",
+    "interval_s": 300,
+    "daily_usd": 3,
+    "threshold": 0.008
+   }
+  },
+  {
+   "name": "macro_sonnet",
+   "class": "AITrader",
+   "risk": {
+    "max_position_frac": 0.4,
+    "max_exposure": 0.85,
+    "risk_per_trade": 0.015,
+    "dd_pause": 0.04,
+    "dd_halt": 0.08
+   },
+   "comment": "Macro allocator: target weights across TMN-priced assets that gain when the toman weakens.",
+   "params": {
+    "model": "claude-haiku-5-5",
+    "mode": "solo",
+    "style": "macro",
+    "interval_s": 900,
+    "daily_usd": 3,
+    "threshold": 0.008,
+    "universe": [
+     "USDTTMN",
+     "XAUTTMN",
+     "USOONTMN",
+     "BTCTMN",
+     "ETHTMN",
+     "XRPTMN",
+     "BNBTMN",
+     "TRXTMN"
+    ]
+   }
+  },
+  {
+   "name": "macro_opus",
+   "class": "AITrader",
+   "risk": {
+    "max_position_frac": 0.4,
+    "max_exposure": 0.85,
+    "risk_per_trade": 0.015,
+    "dd_pause": 0.04,
+    "dd_halt": 0.08
+   },
+   "comment": "Macro allocator: target weights across TMN-priced assets that gain when the toman weakens.",
+   "params": {
+    "model": "claude-haiku-5-5",
+    "mode": "solo",
+    "style": "macro",
+    "interval_s": 1200,
+    "daily_usd": 3,
+    "threshold": 0.008,
+    "universe": [
+     "USDTTMN",
+     "XAUTTMN",
+     "USOONTMN",
+     "BTCTMN",
+     "ETHTMN",
+     "XRPTMN",
+     "BNBTMN",
+     "TRXTMN"
+    ]
+   }
+  },
+  {
+   "name": "hold_btc",
+   "class": "HoldBenchmark",
+   "params": {
+    "symbol": "BTCTMN",
+    "fraction": 0.98
+   },
+   "risk": {
+    "max_position_frac": 1.0,
+    "risk_per_trade": 1.0,
+    "dd_pause": 1.0,
+    "dd_halt": 1.0
+   }
+  },
+  {
+   "name": "live_dry_maker",
+   "class": "FairValueMaker",
+   "params": {
+    "margin": 0.004,
+    "min_spread": 0.006,
+    "max_spread": 0.03,
+    "size_frac": 0.15,
+    "max_symbols": 5,
+    "max_exposure": 0.6,
+    "stop": 0.03,
+    "hold_minutes": 360,
+    "min_profit": 0.001
+   },
+   "live": "dry_run",
+   "comment": "Real live code path with a key-less dry-run client: logs the exact Wallex requests, never sends."
+  }
+ ],
+ "wallex_env_file": "/opt/wallex/private/wallex.env",
+ "websocket": true,
+ "rest_every_ticks": 4,
+ "comment_models": "2026-10-23 07:40 UTC: all AI accounts switched to claude-haiku-5-5 by user decision; account names keep their history, each logged decision records its model."
+}

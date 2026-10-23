@@ -1,0 +1,79 @@
+{
+  "fee_rate_per_side": 0.0035,
+  "horizon_hours": 8,
+  "interval_seconds": 3600,
+  "llm_model": "claude-haiku-5-5",
+  "minimum_net_edge": 0.002,
+  "mode": "paper",
+  "model": "claude-haiku-5-5",
+  "quant": {
+    "candidate_suite": [
+      "ridge",
+      "tree",
+      "ensemble",
+      "zero",
+      "trend"
+    ],
+    "capital_fraction_per_asset": 0.0625,
+    "evaluation_use": "research_development_reused_period_not_untouched_test",
+    "gate": "predicted net > minimum_net_edge; lower-bound stress reported separately",
+    "lower_residual_quantile": 0.1,
+    "opportunity": "one opportunity each8h UTC; next-open entry and exit after8h; no overlapping positions perasset",
+    "primary_candidate": "calibration_selected",
+    "protocol_version": "wallex-agent-quant-v1",
+    "ridge_alpha": 10.0,
+    "selection": "fixed ensemble; no tuning or model selection using evaluation outcomes",
+    "selection_mode": "calibration_only",
+    "selection_rule": "calibration only >=3 trades, positive base and1h delay, maximize min(base,delay); cash if none",
+    "split_fractions": [
+      0.5,
+      0.2,
+      0.3
+    ],
+    "stress": [
+      "double_cost_same_entries",
+      "one_hour_delay_same_signal"
+    ],
+    "tree_settings": {
+      "colsample_bytree": 0.8,
+      "device": "cpu",
+      "learning_rate": 0.03,
+      "max_depth": 3,
+      "min_child_weight": 20,
+      "n_estimators": 300,
+      "n_jobs": 4,
+      "objective": "reg:squarederror",
+      "random_state": 42,
+      "reg_alpha": 0.0,
+      "reg_lambda": 10.0,
+      "subsample": 0.8,
+      "tree_method": "hist"
+    },
+    "trend_rule": "return_24>0 and sma_12/sma_48>1, additionally fixed20bp predicted net edge gate for paper consistency",
+    "universe_bias": "Current volume/spread and current exclusion list; not historical point-in-time eligibility; survivorship/selection bias",
+    "universe_source": "/opt/wallex/research/agent-v2/universe-initial.json",
+    "upper_residual_quantile": 0.9
+  },
+  "quote_currency": "TMN",
+  "schema_version": 1,
+  "slippage_rate_per_side": 0.001,
+  "symbols": [
+    "USDTTMN",
+    "PEPETMN",
+    "BTCTMN",
+    "PUMPTMN",
+    "ETHTMN",
+    "USOONTMN",
+    "XRPTMN",
+    "DOGETMN",
+    "ARBTMN",
+    "XAUTTMN",
+    "SOLTMN",
+    "STMN",
+    "TRXTMN",
+    "LTCTMN",
+    "APETMN",
+    "SUITMN"
+  ],
+  "warmup_hours": 48
+}

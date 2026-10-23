@@ -1,0 +1,14 @@
+# Tool configuration only. The repository is run from a checkout (python -m experiments.<module>),
+# not installed as a package; dependencies live in requirements*.txt.
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 160
+extend-exclude = [".venv", "build", "artifacts"]
+
+[tool.ruff.lint]
+# Correctness only (syntax errors, undefined names); the code base uses a dense house style.
+select = ["E9", "F63", "F7", "F82"]

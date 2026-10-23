@@ -1,0 +1,46 @@
+# Wallex app manifest (deploy + IaC). Team-wide stack: negahban infra/liara.yaml
+# Desired state of Liara resources. Plan: python3 infra/liara_apply.py plan -f infra/liara.app.yaml
+# Values of env vars never live here - only their names. See docs/DEPLOYMENT.md "Infrastructure as code".
+apiVersion: meowmeow.platform/v1
+kind: LiaraStack
+team:
+  network: meow-net               # private network required by g2 plans
+apps:
+  - name: meowmeow-wallex
+    description: Wallex trading dashboard + engine control (engine off and disarmed by default)
+    url: https://meowmeow-wallex.liara.run
+    platform: docker
+    port: 8080
+    plan: small-g2
+    bundle: basic
+    zeroDowntime: false
+    readOnlyRootFilesystem: false
+    running: true
+    build: {location: germany, dockerfile: ./Dockerfile, cache: true}
+    disks:
+      - name: wallex-data
+        sizeGB: 1
+        mountTo: /data
+        backup:
+          native: false
+          offsite: {keep: 7, exclude: []}
+    envs:
+      required: [WALLEX_ADMIN_PASSWORD, BOXAPI_BASE_URL, BOXAPI_KEYS, LLM_PROVIDER, WALLEX_ENGINE, WALLEX_LIVE_ENABLED]
+      # ANTHROPIC_BASE_URL / ANTHROPIC_AUTH_TOKEN are required while LLM_PROVIDER=anthropic (they hold the LLM gate URL + gate token);
+      # WALLEX_API_KEY / WALLEX_SUBACCOUNT_ID are only needed to arm live trading.
+      optional: [ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN, WALLEX_ANTHROPIC_MODEL, WALLEX_BOXAPI_MODEL, OBS_ENV, LOG_LEVEL, APP_ENV, TZ,
+                 LLM_GATE_URL, LLM_GATE_TOKEN, WALLEX_API_KEY, WALLEX_SUBACCOUNT_ID, LLM_FALLBACK, WALLEX_MCP_TOOLS, WALLEX_MCP_URL,
+                 WALLEX_MCP_MAX_CALLS, WALLEX_MAX_EXPOSURE, WALLEX_CHALLENGE_END_UTC, WALLEX_FLATTEN_MINUTES, WALLEX_NO_NEW_ENTRIES_MINUTES,
+                 SNAPSHOT_PUSH_TOKEN, SNAPSHOT_PUSH_MAX_BYTES, WALLEX_LIVE_STRATEGY]
+    healthCheck:
+      command: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8080/healthz', timeout=5)"]
+      interval: 30
+      timeout: 10
+      retries: 3
+      startPeriod: 30
+    smoke:
+      checks:
+        - {path: /healthz, expectStatus: 200, contains: ok}
+        - {path: /, expectStatus: 401}          # dashboard must stay behind auth
+    slo: {availability: 99.5, p95LatencyMs: 1500, probePath: /healthz}
+    scaling: {mode: vertical, min: small-g2, max: medium-g2, scaleUpWhen: "memory > 85% for 15 min (engine armed)"}

@@ -1,0 +1,36 @@
+# Weekly dependency updates; security updates arrive as soon as an advisory is published.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "04:00"
+    open-pull-requests-limit: 5
+    labels: [dependencies]
+    groups:
+      pip-minor-and-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "04:00"
+    open-pull-requests-limit: 5
+    labels: [dependencies]
+    groups:
+      docker-minor-and-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "04:00"
+    open-pull-requests-limit: 5
+    labels: [dependencies]
+    groups:
+      github_actions-minor-and-patch:
+        update-types: [minor, patch]

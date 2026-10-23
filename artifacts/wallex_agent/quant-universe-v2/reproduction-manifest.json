@@ -1,0 +1,11 @@
+{
+  "model_file_sha256": "edfde497f6f13975877e7342d86b385e2c120ce48f68b7cde1fbc529fb302cc9",
+  "model_hash": "a78b63415cd2e3777efef7aab94c17f602c5292523ea4149c7e631f8e38c81b9",
+  "protocol_source_sha256_verified": true,
+  "quant_source_sha256": "8bc4521196bed933146a3ce48f36913f990ab2a20d89b8e1cc8889e3999d55b1",
+  "report_file_sha256": "fa86fd5161dc194b0b2c97217db56baa4c3357fe5a45de373379f282208f768c",
+  "requirements_freeze_sha256": "44a803a9dcba63a422a6c488ab28aeed773abc02882e6c09026907b5cc04f3cd",
+  "runtime_versions_sha256": "32163cc4e69c097fec560f1c134ca7dbe0afd2a1123bb4ff2197acdf563e78c2",
+  "shared_report_sha256": "19ae86fcce4a6cbaac8b62bef23d3e54f249fb75f507ad0aa41210632b7be6d3",
+  "training_config_hash_verified": true
+}

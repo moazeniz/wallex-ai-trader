@@ -1,0 +1,17 @@
+{
+  "objective": "maximize_final_realized_net_tmn_after_all_costs",
+  "initial_capital_tmn": 5000000,
+  "profit_basis": "same starting capital for all teams; fees included; final holdings realized inTMN",
+  "trading_cutoff": null,
+  "submission_deadline_from_pasted_page": "1 Aban1405 23:50; not assumed to be tradingcutoff",
+  "rules": [
+    "credited subaccount only",
+    "account approved markets",
+    "spot no leverage per supplied chat",
+    "algorithmic decisions and orders only",
+    "no self trades",
+    "no wash trades",
+    "matching source and decision logs"
+  ],
+  "research_universe": "all publicTMNmarkets minus pasted exclusions, ranked by current liquidity; actual account eligibility stillunverified"
+}

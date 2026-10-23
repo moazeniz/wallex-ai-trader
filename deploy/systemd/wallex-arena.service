@@ -1,0 +1,34 @@
+# Template: rendered by deploy/systemd/install.sh (@@...@@ placeholders).
+# PAPER by default: accounts in the arena config are paper accounts, and any account marked
+# "live" can only send orders when WALLEX_LIVE_ENABLED=1 AND /var/lib/wallex-arena/LIVE_DISABLED
+# is absent. This unit sets neither; see live/wallex-arena.live.conf for the explicit go-live drop-in.
+[Unit]
+Description=Wallex arena: parallel trading strategies (rule-based and LLM-led) on one live market feed
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=@@SERVICE_USER@@
+Group=@@SERVICE_USER@@
+WorkingDirectory=@@APP_DIR@@
+StateDirectory=wallex-arena
+StateDirectoryMode=0750
+# File with ANTHROPIC_API_KEY=... (root-owned, mode 0600); exposed to the process as %d/anthropic.
+LoadCredential=anthropic:@@SECRETS_DIR@@/anthropic.env
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONWARNINGS=ignore
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=@@VENV@@/bin/python -m experiments.wallex_arena run @@ARENA_CONFIG@@ /var/lib/wallex-arena %d/anthropic
+Restart=always
+RestartSec=20
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/wallex-arena
+MemoryMax=1500M
+CPUQuota=150%
+
+[Install]
+WantedBy=multi-user.target
