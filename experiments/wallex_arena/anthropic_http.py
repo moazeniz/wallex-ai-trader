@@ -38,8 +38,10 @@ def _urllib_transport(url: str, body: bytes, headers: dict, timeout: float) -> t
 class AnthropicHTTP:
     def __init__(self, base_url: str = DEFAULT_BASE, auth_token: str | None = None, api_key: str | None = None,
                  transport: Callable[[str, bytes, dict, float], tuple[int, bytes]] | None = None, max_attempts: int = 2,
-                 sleep: Callable[[float], None] = time.sleep):
+                 sleep: Callable[[float], None] = time.sleep, timeout: float | None = None):
         self.max_attempts, self.sleep = max_attempts, sleep
+        # short per-request timeout so a hanging gateway hands over to the fallback provider quickly
+        self.timeout = timeout or float(os.environ.get("LLM_TIMEOUT_S") or 30)
         self.base_url = base_url.rstrip("/")
         self._token, self._key = auth_token or None, api_key or None
         self.transport = transport or _urllib_transport
@@ -65,7 +67,8 @@ class AnthropicHTTP:
         auth = "bearer" if self._token else "x-api-key" if self._key else "missing"
         return f"AnthropicHTTP(base_url={self.base_url!r}, auth={auth})"
 
-    def messages(self, body: dict, timeout: float = 180.0) -> dict:
+    def messages(self, body: dict, timeout: float | None = None) -> dict:
+        timeout = timeout or self.timeout
         if not self.configured:
             raise LLMHTTPError("anthropic", None, "no credentials (ANTHROPIC_AUTH_TOKEN / ANTHROPIC_API_KEY)")
         headers = {"Content-Type": "application/json", "anthropic-version": VERSION}
@@ -82,7 +85,8 @@ class AnthropicHTTP:
             raise HTTPStatusError(status, raw[:300].decode(errors="replace"))
         try:   # one retry for 429/5xx/network (backoff + jitter), breaker "llm.anthropic"; then the caller falls back
             out = call("llm.anthropic", once, max_attempts=self.max_attempts, base=1.0, cap=8.0, endpoint="/v1/messages",
-                       retry_if=lambda e: is_transient(e) and getattr(e, "status", None) not in (401, 403), sleep=self.sleep)
+                       retry_if=lambda e: isinstance(e, HTTPStatusError) and e.status in (429, 500, 502, 504, 529), sleep=self.sleep)
+            # timeouts, connection errors and 503 (the gateway kill switch) are not retried: the caller falls back at once
         except HTTPStatusError as exc:
             self.stats["errors"] = (self.stats["errors"] + [f"http_{exc.status}"])[-10:]
             raise LLMHTTPError("anthropic", exc.status, exc.detail) from None

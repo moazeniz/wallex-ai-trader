@@ -80,7 +80,8 @@ class BoxAPIClient:
             ready = [i for i in order if self._cool_until[i] <= now]
             return ready + [i for i in order if i not in ready]  # all cooling: still try, soonest-free last
 
-    def chat(self, body: dict, timeout: float = 180.0) -> dict:
+    def chat(self, body: dict, timeout: float | None = None) -> dict:
+        timeout = timeout or float(os.environ.get("BOXAPI_TIMEOUT_S") or 60)
         """POST /chat/completions; returns the parsed JSON response. Raises BoxAPIError when every key failed."""
         from . import obs
         from .resilience import breaker

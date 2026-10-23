@@ -208,3 +208,20 @@ def test_without_llm_provider_the_model_name_decides_and_key_file_uses_x_api_key
 def test_model_tier_is_kept_across_providers(tmp_path, configured, anthropic_model, boxapi_model):
     tr = trader(tmp_path, RELAY, model=configured)
     assert tr.routes == [("anthropic", anthropic_model), ("boxapi", boxapi_model)]
+
+
+def test_anthropic_timeout_is_short_and_not_retried_so_fallback_is_fast(tmp_path):
+    import socket as _s
+    calls = []
+
+    def hang(url, body, headers, timeout):
+        calls.append(timeout)
+        raise _s.timeout("gateway hangs")
+    seen = []
+    tr = trader(tmp_path, dict(RELAY, LLM_TIMEOUT_S="7"))
+    tr.clients["anthropic"].timeout = 7.0
+    tr.clients["anthropic"].transport = hang
+    tr.clients["boxapi"].transport = boxapi_ok(seen)
+    tr._run("{}")
+    r = tr.take()
+    assert calls == [7.0] and r["ok"] and r["provider"] == "boxapi"      # one 7 s attempt, then BoxAPI
