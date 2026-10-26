@@ -1,7 +1,7 @@
 # Test and lint tooling (CI installs this file).
 -r requirements.txt
 pytest==9.1.1
-ruff==0.6.9
+ruff==0.17.2
 # Needed only by tests/test_exchange.py, which covers the legacy data/ clients.
 ccxt==4.5.89
 requests==2.34.2
